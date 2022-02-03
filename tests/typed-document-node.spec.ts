@@ -56,6 +56,8 @@ describe('TypedDocumentNode', () => {
       { dedupeFragments: true },
       { outputFile: '' }
     )) as Types.ComplexPluginOutput;
+    
+    console.log(res.content);
 
     expect((res.content.match(/JobSimpleRecruiterDataFragmentDoc.definitions/g) || []).length).toBe(1);
   });

@@ -1,6 +1,6 @@
 import { Types, PluginValidateFn, PluginFunction, oldVisit } from '@graphql-codegen/plugin-helpers';
 import { concatAST, GraphQLSchema, Kind, FragmentDefinitionNode } from 'graphql';
-import { TypeScriptTypedDocumentNodesConfig } from './config';
+import { AsaTypeScriptTypedDocumentNodesConfig } from './config';
 import { extname } from 'path';
 import {
   LoadedFragment,
@@ -10,10 +10,10 @@ import {
 } from '@graphql-codegen/visitor-plugin-common';
 import { TypeScriptDocumentNodesVisitor } from './visitor';
 
-export const plugin: PluginFunction<TypeScriptTypedDocumentNodesConfig> = (
+export const plugin: PluginFunction<AsaTypeScriptTypedDocumentNodesConfig> = (
   schema: GraphQLSchema,
   rawDocuments: Types.DocumentFile[],
-  config: TypeScriptTypedDocumentNodesConfig
+  config: AsaTypeScriptTypedDocumentNodesConfig
 ) => {
   const documents = config.flattenGeneratedTypes ? optimizeOperations(schema, rawDocuments) : rawDocuments;
   const allAst = concatAST(documents.map(v => v.document));
@@ -46,12 +46,12 @@ export const validate: PluginValidateFn<RawClientSideBasePluginConfig> = async (
   outputFile: string
 ) => {
   if (config && config.documentMode === DocumentMode.string) {
-    throw new Error(`Plugin "typed-document-node" does not allow using 'documentMode: string' configuration!`);
+    throw new Error(`Plugin "asa-graphql-ts-typed-document" does not allow using 'documentMode: string' configuration!`);
   }
 
   if (extname(outputFile) !== '.ts' && extname(outputFile) !== '.tsx') {
-    throw new Error(`Plugin "typed-document-node" requires extension to be ".ts" or ".tsx"!`);
+    throw new Error(`Plugin "asa-graphql-ts-typed-document" requires extension to be ".ts" or ".tsx"!`);
   }
 };
 
-export { TypeScriptTypedDocumentNodesConfig };
+export { AsaTypeScriptTypedDocumentNodesConfig };
