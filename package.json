@@ -1,0 +1,62 @@
+{
+  "name": "asa-graphql-ts-typed-document",
+  "version": "0.0.1",
+  "description": "POC graphql-code-generator plugin for typed documents. Forked from https://github.com/dotansimha/graphql-code-generator",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/asakusuma/asa-graphql-ts-typed-document.git"
+  },
+  "license": "MIT",
+  "scripts": {
+    "lint": "eslint **/*.ts",
+    "test": "jest --no-watchman --config ./jest.config.js",
+    "prepack": "bob prepack"
+  },
+  "peerDependencies": {
+    "graphql": "^0.8.0 || ^0.9.0 || ^0.10.0 || ^0.11.0 || ^0.12.0 || ^0.13.0 || ^14.0.0 || ^15.0.0 || ^16.0.0"
+  },
+  "dependencies": {
+    "@graphql-codegen/plugin-helpers": "^2.4.0",
+    "@graphql-codegen/visitor-plugin-common": "2.6.0",
+    "auto-bind": "~4.0.0",
+    "change-case-all": "1.0.14",
+    "graphql": "^16.3.0",
+    "tslib": "~2.3.0"
+  },
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "exports": {
+    "./package.json": "./package.json",
+    ".": {
+      "require": "./dist/index.js",
+      "import": "./dist/index.mjs"
+    },
+    "./*": {
+      "require": "./dist/*.js",
+      "import": "./dist/*.mjs"
+    }
+  },
+  "typings": "dist/index.d.ts",
+  "typescript": {
+    "definition": "dist/index.d.ts"
+  },
+  "buildOptions": {
+    "input": "./src/index.ts"
+  },
+  "publishConfig": {
+    "directory": "dist",
+    "access": "public"
+  },
+  "devDependencies": {
+    "@babel/preset-env": "^7.16.11",
+    "@babel/preset-typescript": "^7.16.7",
+    "@types/jest": "^27.4.0",
+    "babel-jest": "^27.4.6",
+    "jest": "^27.4.7",
+    "ts-jest": "^27.1.3"
+  },
+  "resolutions": {
+    "babel-jest": "27.4.6",
+    "jest-runner": "27.4.6"
+  }
+}
