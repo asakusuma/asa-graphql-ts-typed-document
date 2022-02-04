@@ -1,21 +1,20 @@
 import { Types, PluginValidateFn, PluginFunction, oldVisit } from '@graphql-codegen/plugin-helpers';
 import { concatAST, GraphQLSchema, Kind, FragmentDefinitionNode } from 'graphql';
-import { AsaTypeScriptTypedDocumentNodesConfig } from './config';
 import { extname } from 'path';
 import {
   LoadedFragment,
   RawClientSideBasePluginConfig,
-  DocumentMode,
-  optimizeOperations,
+  DocumentMode
 } from '@graphql-codegen/visitor-plugin-common';
 import { TypeScriptDocumentNodesVisitor } from './visitor';
 
-export const plugin: PluginFunction<AsaTypeScriptTypedDocumentNodesConfig> = (
+export const plugin: PluginFunction<RawClientSideBasePluginConfig> = (
   schema: GraphQLSchema,
   rawDocuments: Types.DocumentFile[],
-  config: AsaTypeScriptTypedDocumentNodesConfig
+  config: RawClientSideBasePluginConfig
 ) => {
-  const documents = config.flattenGeneratedTypes ? optimizeOperations(schema, rawDocuments) : rawDocuments;
+  // const documents = config.flattenGeneratedTypes ? optimizeOperations(schema, rawDocuments) : rawDocuments;
+  const documents = rawDocuments;
   const allAst = concatAST(documents.map(v => v.document));
 
   const allFragments: LoadedFragment[] = [
@@ -53,5 +52,3 @@ export const validate: PluginValidateFn<RawClientSideBasePluginConfig> = async (
     throw new Error(`Plugin "asa-graphql-ts-typed-document" requires extension to be ".ts" or ".tsx"!`);
   }
 };
-
-export { AsaTypeScriptTypedDocumentNodesConfig };

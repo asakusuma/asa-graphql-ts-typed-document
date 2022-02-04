@@ -1,6 +1,21 @@
 import { Types } from '@graphql-codegen/plugin-helpers';
 import { buildSchema, parse } from 'graphql';
 import { plugin } from '../src';
+import * as ts from 'typescript';
+
+function findAncestor(node: ts.Node, visitor: (n: ts.Node) => boolean) {
+  if (visitor(node)) {
+    return true;
+  }
+  let found = false;
+  node.forEachChild((n) => {
+    if (!found) {
+      found = findAncestor(n, visitor);
+    }
+  });
+  return found;
+}
+
 
 describe('TypedDocumentNode', () => {
   it('Should not output imports when there are no operations at all', async () => {
@@ -9,7 +24,7 @@ describe('TypedDocumentNode', () => {
     expect(result.prepend.length).toBe(0);
   });
 
-  it('Duplicated nested fragments handle (dedupeFragments=true)', async () => {
+  it('Should not output object literal', async () => {
     const schema = buildSchema(/* GraphQL */ `
       schema {
         query: Query
@@ -29,96 +44,27 @@ describe('TypedDocumentNode', () => {
     const ast = parse(/* GraphQL */ `
       query GetJobs {
         jobs {
-          ...DataForPageA
-          ...DataForPageB
-          ...JobSimpleRecruiterData
+          recruiterName
         }
-      }
-
-      fragment DataForPageA on Job {
-        id
-        ...JobSimpleRecruiterData
-      }
-
-      fragment DataForPageB on Job {
-        title
-        ...JobSimpleRecruiterData
-      }
-
-      fragment JobSimpleRecruiterData on Job {
-        recruiterName
       }
     `);
 
     const res = (await plugin(
       schema,
       [{ location: '', document: ast }],
-      { dedupeFragments: true },
+      {},
       { outputFile: '' }
     )) as Types.ComplexPluginOutput;
 
-    expect((res.content.match(/JobSimpleRecruiterDataFragmentDoc.definitions/g) || []).length).toBe(1);
+    const node = ts.createSourceFile(
+      'plugin-output.ts',
+      res.content,
+      ts.ScriptTarget.Latest
+    );
+    expect(findAncestor(node, (n) => ts.SyntaxKind[n.kind] === 'ObjectLiteralExpression')).toBeFalsy();
   });
 
-  it('Check with nested and recursive fragments handle (dedupeFragments=true)', async () => {
-    const schema = buildSchema(/* GraphQL */ `
-      type Query {
-        test: MyType
-        nested: MyOtherType
-      }
-
-      type MyOtherType {
-        myType: MyType!
-        myOtherTypeRecursive: MyOtherType!
-      }
-
-      type MyType {
-        foo: String!
-      }
-    `);
-
-    const ast = parse(/* GraphQL */ `
-      query test {
-        test {
-          ...MyTypeFields
-          nested {
-            myOtherTypeRecursive {
-              myType {
-                ...MyTypeFields
-              }
-              myOtherTypeRecursive {
-                ...MyOtherTypeRecursiveFields
-              }
-            }
-            myType {
-              ...MyTypeFields
-            }
-          }
-        }
-      }
-
-      fragment MyOtherTypeRecursiveFields on MyOtherType {
-        myType {
-          ...MyTypeFields
-        }
-      }
-
-      fragment MyTypeFields on MyType {
-        foo
-      }
-    `);
-
-    const res = (await plugin(
-      schema,
-      [{ location: '', document: ast }],
-      { dedupeFragments: true },
-      { outputFile: '' }
-    )) as Types.ComplexPluginOutput;
-
-    expect((res.content.match(/MyTypeFieldsFragmentDoc.definitions/g) || []).length).toBe(1);
-  });
-
-  it('Ignore duplicated nested fragments handle (dedupeFragments=false)', async () => {
+  it('Should output multiple types for multiple queries', async () => {
     const schema = buildSchema(/* GraphQL */ `
       schema {
         query: Query
@@ -135,105 +81,43 @@ describe('TypedDocumentNode', () => {
       }
     `);
 
-    const ast = parse(/* GraphQL */ `
+    const ast1 = parse(/* GraphQL */ `
       query GetJobs {
         jobs {
-          ...DataForPageA
-          ...DataForPageB
+          title
         }
       }
+    `);
 
-      fragment DataForPageA on Job {
-        id
-        ...JobSimpleRecruiterData
-      }
-
-      fragment DataForPageB on Job {
-        title
-        ...JobSimpleRecruiterData
-      }
-
-      fragment JobSimpleRecruiterData on Job {
-        recruiterName
+    const ast2 = parse(/* GraphQL */ `
+      query GetJobRecruiters {
+        jobs {
+          recruiterName
+        }
       }
     `);
 
     const res = (await plugin(
       schema,
-      [{ location: '', document: ast }],
-      { dedupeFragments: false },
+      [{ location: '', document: ast1 }, { location: '', document: ast2 }],
+      {},
       { outputFile: '' }
     )) as Types.ComplexPluginOutput;
 
-    expect((res.content.match(/JobSimpleRecruiterDataFragmentDoc.definitions/g) || []).length).toBe(2);
-  });
-
-  describe('addTypenameToSelectionSets', () => {
-    it('Check is add __typename to typed document', async () => {
-      const schema = buildSchema(/* GraphQL */ `
-        schema {
-          query: Query
-        }
-
-        type Query {
-          job: Job
-        }
-
-        type Job {
-          id: ID!
-        }
-      `);
-
-      const ast = parse(/* GraphQL */ `
-        query {
-          job {
-            id
-          }
-        }
-      `);
-
-      const res = (await plugin(
-        schema,
-        [{ location: '', document: ast }],
-        { addTypenameToSelectionSets: true },
-        { outputFile: '' }
-      )) as Types.ComplexPluginOutput;
-
-      expect((res.content.match(/__typename/g) || []).length).toBe(1);
-    });
-
-    it('Check with __typename in selection set', async () => {
-      const schema = buildSchema(/* GraphQL */ `
-        schema {
-          query: Query
-        }
-
-        type Query {
-          job: Job
-        }
-
-        type Job {
-          id: ID!
-        }
-      `);
-
-      const ast = parse(/* GraphQL */ `
-        query {
-          job {
-            id
-            __typename
-          }
-        }
-      `);
-
-      const res = (await plugin(
-        schema,
-        [{ location: '', document: ast }],
-        { addTypenameToSelectionSets: true },
-        { outputFile: '' }
-      )) as Types.ComplexPluginOutput;
-
-      expect((res.content.match(/__typename/g) || []).length).toBe(1);
-    });
+    const node = ts.createSourceFile(
+      'plugin-output.ts',
+      res.content,
+      ts.ScriptTarget.Latest
+    );
+    expect(findAncestor(node, (n) => ts.SyntaxKind[n.kind] === 'ObjectLiteralExpression')).toBeFalsy();
+    const typeDefinitions = node.getChildAt(0).getChildren().filter((child: ts.TypeAliasDeclaration) => {
+      if (ts.SyntaxKind[child.kind] === 'TypeAliasDeclaration') {
+        return true;
+      }
+      return false;
+    }) as ts.TypeAliasDeclaration[];
+    expect(typeDefinitions.length).toBe(2);
+    expect(typeDefinitions[0].name.escapedText).toBe('GetJobsDocument');
+    expect(typeDefinitions[1].name.escapedText).toBe('GetJobRecruitersDocument');
   });
 });
