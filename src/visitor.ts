@@ -72,14 +72,13 @@ export class TypeScriptDocumentNodesVisitor extends ClientSideBaseVisitor<
     });
 
     const source = this.getOperationLocation(node);
-
     if (isAnonymousQuery && source) {
       return generateModuleDeclaration(source, documentVariableName, {
           resultType: operationResultType,
-          variablesType: operationVariablesTypes
+          variablesType: node.variableDefinitions.length && operationVariablesTypes
       });
   } else if(!isAnonymousQuery) {
-      const typeDef = `export type ${documentVariableName} = DocumentNode<${operationResultType}, ${operationVariablesTypes}>;`;
+      const typeDef = `export type ${documentVariableName} = ${getDocumentType(operationResultType, node.variableDefinitions.length && operationVariablesTypes)};`;
       // TODO: do we allow multiple queries per file?
       const moduleDeclaration = source ? generateModuleDeclaration(source, documentVariableName) : '';
       return typeDef + '\n' + moduleDeclaration;
@@ -93,7 +92,7 @@ interface QueryTypes {
   variablesType: string;
 }
 
-function getDocumentType(operationResultType: string, operationVariablesTypes: string) {
+function getDocumentType(operationResultType: string, operationVariablesTypes?: string) {
   if (operationVariablesTypes) {
       return `DocumentNode<${operationResultType}, ${operationVariablesTypes}>`;
   }

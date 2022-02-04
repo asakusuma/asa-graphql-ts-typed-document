@@ -107,7 +107,57 @@ describe('TypedDocumentNode', () => {
     expect(ts.SyntaxKind[children[1].kind]).toBe('ModuleDeclaration');
   });
 
-  it('Should handle anonymous queries with locations', async () => {
+  it('Should handle anonymous queries with variables with locations', async () => {
+    const schema = buildSchema(/* GraphQL */ `
+      schema {
+        query: Query
+      }
+
+      type Query {
+        jobs: [Job!]!
+      }
+
+      type Job {
+        id: ID!
+        recruiterName: String!
+        title: String!
+      }
+    `);
+
+    const ast = parse(/* GraphQL */ `
+      query($jobId: String)  {
+        jobs(job: $jobId) {
+          recruiterName
+        }
+      }
+    `);
+
+
+    const res = (await plugin(
+      schema,
+      [{ location: 'my/document/file.graphql', document: ast }],
+      {},
+      { outputFile: '' }
+    )) as Types.ComplexPluginOutput;
+
+    const node = ts.createSourceFile(
+      'plugin-output.ts',
+      res.content,
+      ts.ScriptTarget.Latest
+    );
+    expect(findAncestor(node, (n) => ts.SyntaxKind[n.kind] === 'ObjectLiteralExpression')).toBeFalsy();
+    const children = node.getChildAt(0).getChildren();
+    expect(children.length).toBe(1);
+    const firstChild = children[0] as ts.ModuleDeclaration;
+    expect(ts.SyntaxKind[firstChild.kind]).toBe('ModuleDeclaration');
+    expect(firstChild.body).toBeTruthy();
+    const body = firstChild.body as ts.ModuleBlock;
+    const alias = body.statements[0] as ts.TypeAliasDeclaration;
+    const generics = (alias.type as any).typeArguments;
+    expect(generics.length).toBe(2);
+  });
+
+  it('Should handle anonymous queries with no variables but with locations', async () => {
     const schema = buildSchema(/* GraphQL */ `
       schema {
         query: Query
@@ -147,7 +197,13 @@ describe('TypedDocumentNode', () => {
     expect(findAncestor(node, (n) => ts.SyntaxKind[n.kind] === 'ObjectLiteralExpression')).toBeFalsy();
     const children = node.getChildAt(0).getChildren();
     expect(children.length).toBe(1);
-    expect(ts.SyntaxKind[children[0].kind]).toBe('ModuleDeclaration');
+    const firstChild = children[0] as ts.ModuleDeclaration;
+    expect(ts.SyntaxKind[firstChild.kind]).toBe('ModuleDeclaration');
+    expect(firstChild.body).toBeTruthy();
+    const body = firstChild.body as ts.ModuleBlock;
+    const alias = body.statements[0] as ts.TypeAliasDeclaration;
+    const generics = (alias.type as any).typeArguments;
+    expect(generics.length).toBe(1);
   });
 
   it('Should output multiple types for multiple queries', async () => {
