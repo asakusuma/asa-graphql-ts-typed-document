@@ -7,17 +7,33 @@ import {
   DocumentMode,
   RawClientSideBasePluginConfig,
 } from '@graphql-codegen/visitor-plugin-common';
-import { GraphQLSchema, OperationDefinitionNode } from 'graphql';
+import { DefinitionNode, GraphQLSchema, OperationDefinitionNode } from 'graphql';
 
 interface TypeScriptDocumentNodesVisitorPluginConfig extends RawClientSideBasePluginConfig {
   addTypenameToSelectionSets?: boolean;
+}
+
+// This probably gonna be a perf bottleneck. Probably need to somehow ensure source file location is available
+// natively in the visitor for the OperationDefinition method
+function generateOperationToSourceMap(documents: Types.DocumentFile[]): Map<DefinitionNode, string> {
+  const map = new Map<DefinitionNode, string>();
+  documents.forEach((doc) => {
+    const location = doc.location;
+    if (location && doc.document && doc.document) {
+      doc.document.definitions.forEach((def) => {
+        map.set(def, location);
+      });
+    }
+  });
+
+  return map;
 }
 
 export class TypeScriptDocumentNodesVisitor extends ClientSideBaseVisitor<
   TypeScriptDocumentNodesVisitorPluginConfig,
   ClientSideBasePluginConfig
 > {
-
+  private docSourceMap: Map<DefinitionNode, string>;
   constructor(
     schema: GraphQLSchema,
     fragments: LoadedFragment[],
@@ -35,6 +51,12 @@ export class TypeScriptDocumentNodesVisitor extends ClientSideBaseVisitor<
       {},
       documents
     );
+
+    this.docSourceMap = generateOperationToSourceMap(documents);
+  }
+
+  private getOperationLocation(node: OperationDefinitionNode): string | undefined {
+    return this.docSourceMap.get(node);
   }
 
   public OperationDefinition(node: OperationDefinitionNode): string {
@@ -46,8 +68,23 @@ export class TypeScriptDocumentNodesVisitor extends ClientSideBaseVisitor<
     });
     const operationResultType = this.convertName(node, {
       suffix: operationTypeSuffix + this._parsedConfig.operationResultSuffix,
-  });
+    });
 
-    return `export type ${documentVariableName} = DocumentNode<${operationResultType}, ${operationVariablesTypes}>;`;
+    const source = this.getOperationLocation(node);
+
+    const typeDef = `export type ${documentVariableName} = DocumentNode<${operationResultType}, ${operationVariablesTypes}>;`;
+
+    // TODO: do we allow multiple queries per file?
+    const moduleDeclaration = source ? generateModuleDeclaration(source, documentVariableName) : '';
+
+    return typeDef + '\n' + moduleDeclaration;
   }
+}
+
+function generateModuleDeclaration(path: string, typeVariableName) {
+  return `
+declare module '${path}' {
+  export default ${typeVariableName};
+}
+    `;
 }
