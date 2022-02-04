@@ -107,6 +107,49 @@ describe('TypedDocumentNode', () => {
     expect(ts.SyntaxKind[children[1].kind]).toBe('ModuleDeclaration');
   });
 
+  it('Should handle anonymous queries with locations', async () => {
+    const schema = buildSchema(/* GraphQL */ `
+      schema {
+        query: Query
+      }
+
+      type Query {
+        jobs: [Job!]!
+      }
+
+      type Job {
+        id: ID!
+        recruiterName: String!
+        title: String!
+      }
+    `);
+
+    const ast = parse(/* GraphQL */ `
+      query {
+        jobs {
+          recruiterName
+        }
+      }
+    `);
+
+    const res = (await plugin(
+      schema,
+      [{ location: 'my/document/file.graphql', document: ast }],
+      {},
+      { outputFile: '' }
+    )) as Types.ComplexPluginOutput;
+
+    const node = ts.createSourceFile(
+      'plugin-output.ts',
+      res.content,
+      ts.ScriptTarget.Latest
+    );
+    expect(findAncestor(node, (n) => ts.SyntaxKind[n.kind] === 'ObjectLiteralExpression')).toBeFalsy();
+    const children = node.getChildAt(0).getChildren();
+    expect(children.length).toBe(1);
+    expect(ts.SyntaxKind[children[0].kind]).toBe('ModuleDeclaration');
+  });
+
   it('Should output multiple types for multiple queries', async () => {
     const schema = buildSchema(/* GraphQL */ `
       schema {

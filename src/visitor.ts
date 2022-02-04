@@ -61,6 +61,7 @@ export class TypeScriptDocumentNodesVisitor extends ClientSideBaseVisitor<
 
   public OperationDefinition(node: OperationDefinitionNode): string {
     const documentVariableName = this.getOperationVariableName(node);
+    const isAnonymousQuery = !(!!node.name);
     const operationType = pascalCase(node.operation);
     const operationTypeSuffix = this.getOperationSuffix(node, operationType);
     const operationVariablesTypes = this.convertName(node, {
@@ -72,16 +73,42 @@ export class TypeScriptDocumentNodesVisitor extends ClientSideBaseVisitor<
 
     const source = this.getOperationLocation(node);
 
-    const typeDef = `export type ${documentVariableName} = DocumentNode<${operationResultType}, ${operationVariablesTypes}>;`;
-
-    // TODO: do we allow multiple queries per file?
-    const moduleDeclaration = source ? generateModuleDeclaration(source, documentVariableName) : '';
-
-    return typeDef + '\n' + moduleDeclaration;
+    if (isAnonymousQuery && source) {
+      return generateModuleDeclaration(source, documentVariableName, {
+          resultType: operationResultType,
+          variablesType: operationVariablesTypes
+      });
+  } else if(!isAnonymousQuery) {
+      const typeDef = `export type ${documentVariableName} = DocumentNode<${operationResultType}, ${operationVariablesTypes}>;`;
+      // TODO: do we allow multiple queries per file?
+      const moduleDeclaration = source ? generateModuleDeclaration(source, documentVariableName) : '';
+      return typeDef + '\n' + moduleDeclaration;
+  }
+  return '';
   }
 }
 
-function generateModuleDeclaration(path: string, typeVariableName) {
+interface QueryTypes {
+  resultType: string;
+  variablesType: string;
+}
+
+function getDocumentType(operationResultType: string, operationVariablesTypes: string) {
+  if (operationVariablesTypes) {
+      return `DocumentNode<${operationResultType}, ${operationVariablesTypes}>`;
+  }
+  return `DocumentNode<${operationResultType}>`;
+}
+
+function generateModuleDeclaration(path: string, typeVariableName: string, localTypeNames?: QueryTypes) {
+  if (localTypeNames) {
+    return `
+declare module '${path}' {
+type AnonymousQueryType = ${getDocumentType(localTypeNames.resultType, localTypeNames.variablesType)};
+export default AnonymousQueryType;
+}
+`;
+}
   return `
 declare module '${path}' {
   export default ${typeVariableName};
