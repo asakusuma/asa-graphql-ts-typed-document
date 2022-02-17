@@ -51,4 +51,8 @@ export const validate: PluginValidateFn<RawClientSideBasePluginConfig> = async (
   if (extname(outputFile) !== '.ts' && extname(outputFile) !== '.tsx') {
     throw new Error(`Plugin "asa-graphql-ts-typed-document" requires extension to be ".ts" or ".tsx"!`);
   }
+
+  if (documents.length > 1) {
+    throw new Error(`Plugin "asa-graphql-ts-typed-document" only allows a single document at a time`);
+  }
 };

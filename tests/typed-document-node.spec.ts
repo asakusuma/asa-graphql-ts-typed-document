@@ -64,7 +64,7 @@ describe('TypedDocumentNode', () => {
     expect(findAncestor(node, (n) => ts.SyntaxKind[n.kind] === 'ObjectLiteralExpression')).toBeFalsy();
   });
 
-  it('Should also produce module declaration for queries with locations', async () => {
+  it('Should also produce exported query', async () => {
     const schema = buildSchema(/* GraphQL */ `
       schema {
         query: Query
@@ -103,163 +103,11 @@ describe('TypedDocumentNode', () => {
     );
     expect(findAncestor(node, (n) => ts.SyntaxKind[n.kind] === 'ObjectLiteralExpression')).toBeFalsy();
     const children = node.getChildAt(0).getChildren();
-    expect(children.length).toBe(2);
-    expect(ts.SyntaxKind[children[1].kind]).toBe('ModuleDeclaration');
-  });
-
-  it('Should handle anonymous queries with variables with locations', async () => {
-    const schema = buildSchema(/* GraphQL */ `
-      schema {
-        query: Query
-      }
-
-      type Query {
-        jobs: [Job!]!
-      }
-
-      type Job {
-        id: ID!
-        recruiterName: String!
-        title: String!
-      }
-    `);
-
-    const ast = parse(/* GraphQL */ `
-      query($jobId: String)  {
-        jobs(job: $jobId) {
-          recruiterName
-        }
-      }
-    `);
-
-
-    const res = (await plugin(
-      schema,
-      [{ location: 'my/document/file.graphql', document: ast }],
-      {},
-      { outputFile: '' }
-    )) as Types.ComplexPluginOutput;
-
-    const node = ts.createSourceFile(
-      'plugin-output.ts',
-      res.content,
-      ts.ScriptTarget.Latest
-    );
-    expect(findAncestor(node, (n) => ts.SyntaxKind[n.kind] === 'ObjectLiteralExpression')).toBeFalsy();
-    const children = node.getChildAt(0).getChildren();
-    expect(children.length).toBe(1);
-    const firstChild = children[0] as ts.ModuleDeclaration;
-    expect(ts.SyntaxKind[firstChild.kind]).toBe('ModuleDeclaration');
-    expect(firstChild.body).toBeTruthy();
-    const body = firstChild.body as ts.ModuleBlock;
-    const alias = body.statements[0] as ts.TypeAliasDeclaration;
-    const generics = (alias.type as any).typeArguments;
-    expect(generics.length).toBe(2);
-  });
-
-  it('Should handle anonymous queries with no variables but with locations', async () => {
-    const schema = buildSchema(/* GraphQL */ `
-      schema {
-        query: Query
-      }
-
-      type Query {
-        jobs: [Job!]!
-      }
-
-      type Job {
-        id: ID!
-        recruiterName: String!
-        title: String!
-      }
-    `);
-
-    const ast = parse(/* GraphQL */ `
-      query {
-        jobs {
-          recruiterName
-        }
-      }
-    `);
-
-    const res = (await plugin(
-      schema,
-      [{ location: 'my/document/file.graphql', document: ast }],
-      {},
-      { outputFile: '' }
-    )) as Types.ComplexPluginOutput;
-
-    const node = ts.createSourceFile(
-      'plugin-output.ts',
-      res.content,
-      ts.ScriptTarget.Latest
-    );
-    expect(findAncestor(node, (n) => ts.SyntaxKind[n.kind] === 'ObjectLiteralExpression')).toBeFalsy();
-    const children = node.getChildAt(0).getChildren();
-    expect(children.length).toBe(1);
-    const firstChild = children[0] as ts.ModuleDeclaration;
-    expect(ts.SyntaxKind[firstChild.kind]).toBe('ModuleDeclaration');
-    expect(firstChild.body).toBeTruthy();
-    const body = firstChild.body as ts.ModuleBlock;
-    const alias = body.statements[0] as ts.TypeAliasDeclaration;
-    const generics = (alias.type as any).typeArguments;
-    expect(generics.length).toBe(1);
-  });
-
-  it('Should output multiple types for multiple queries', async () => {
-    const schema = buildSchema(/* GraphQL */ `
-      schema {
-        query: Query
-      }
-
-      type Query {
-        jobs: [Job!]!
-      }
-
-      type Job {
-        id: ID!
-        recruiterName: String!
-        title: String!
-      }
-    `);
-
-    const ast1 = parse(/* GraphQL */ `
-      query GetJobs {
-        jobs {
-          title
-        }
-      }
-    `);
-
-    const ast2 = parse(/* GraphQL */ `
-      query GetJobRecruiters {
-        jobs {
-          recruiterName
-        }
-      }
-    `);
-
-    const res = (await plugin(
-      schema,
-      [{ location: '', document: ast1 }, { location: '', document: ast2 }],
-      {},
-      { outputFile: '' }
-    )) as Types.ComplexPluginOutput;
-
-    const node = ts.createSourceFile(
-      'plugin-output.ts',
-      res.content,
-      ts.ScriptTarget.Latest
-    );
-    expect(findAncestor(node, (n) => ts.SyntaxKind[n.kind] === 'ObjectLiteralExpression')).toBeFalsy();
-    const typeDefinitions = node.getChildAt(0).getChildren().filter((child: ts.TypeAliasDeclaration) => {
-      if (ts.SyntaxKind[child.kind] === 'TypeAliasDeclaration') {
-        return true;
-      }
-      return false;
-    }) as ts.TypeAliasDeclaration[];
-    expect(typeDefinitions.length).toBe(2);
-    expect(typeDefinitions[0].name.escapedText).toBe('GetJobsDocument');
-    expect(typeDefinitions[1].name.escapedText).toBe('GetJobRecruitersDocument');
+    console.log(res.content);
+    expect(children.length).toBe(3);
+    expect(ts.SyntaxKind[children[0].kind]).toBe('TypeAliasDeclaration');
+    const typeDec = children[0] as ts.TypeAliasDeclaration;
+    expect(typeDec.name.escapedText).toEqual('GetJobsDocument');
+    expect(ts.SyntaxKind[children[2].kind]).toBe('ExportAssignment');
   });
 });

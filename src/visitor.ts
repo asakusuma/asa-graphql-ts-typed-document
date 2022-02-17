@@ -62,6 +62,13 @@ export class TypeScriptDocumentNodesVisitor extends ClientSideBaseVisitor<
   public OperationDefinition(node: OperationDefinitionNode): string {
     const documentVariableName = this.getOperationVariableName(node);
     const isAnonymousQuery = !(!!node.name);
+
+    if (isAnonymousQuery) {
+      // Codgen doesn't currently support public assess to the name of operations variables
+      // https://github.com/dotansimha/graphql-code-generator/blob/368a45ed2c324d3ffc648cb805b1252df851e0ce/packages/plugins/other/visitor-plugin-common/src/base-documents-visitor.ts#L188
+      throw new Error('Anonymous queries not supported: ' + this.getOperationLocation(node));
+    }
+
     const operationType = pascalCase(node.operation);
     const operationTypeSuffix = this.getOperationSuffix(node, operationType);
     const operationVariablesTypes = this.convertName(node, {
@@ -71,19 +78,10 @@ export class TypeScriptDocumentNodesVisitor extends ClientSideBaseVisitor<
       suffix: operationTypeSuffix + this._parsedConfig.operationResultSuffix,
     });
 
-    const source = this.getOperationLocation(node);
-    if (isAnonymousQuery && source) {
-      return generateModuleDeclaration(source, documentVariableName, {
-          resultType: operationResultType,
-          variablesType: node.variableDefinitions.length && operationVariablesTypes
-      });
-  } else if(!isAnonymousQuery) {
-      const typeDef = `export type ${documentVariableName} = ${getDocumentType(operationResultType, node.variableDefinitions.length && operationVariablesTypes)};`;
+    const typeDef = `export type ${documentVariableName} = ${getDocumentType(operationResultType, node.variableDefinitions.length && operationVariablesTypes)};`;
       // TODO: do we allow multiple queries per file?
-      const moduleDeclaration = source ? generateModuleDeclaration(source, documentVariableName) : '';
+      const moduleDeclaration = generateModuleDeclaration(documentVariableName);
       return typeDef + '\n' + moduleDeclaration;
-  }
-  return '';
   }
 }
 
@@ -99,18 +97,9 @@ function getDocumentType(operationResultType: string, operationVariablesTypes?: 
   return `DocumentNode<${operationResultType}>`;
 }
 
-function generateModuleDeclaration(path: string, typeVariableName: string, localTypeNames?: QueryTypes) {
-  if (localTypeNames) {
-    return `
-declare module '${path}' {
-type AnonymousQueryType = ${getDocumentType(localTypeNames.resultType, localTypeNames.variablesType)};
-export default AnonymousQueryType;
-}
-`;
-}
+function generateModuleDeclaration(typeVariableName: string, localTypeNames?: QueryTypes) {
   return `
-declare module '${path}' {
-  export default ${typeVariableName};
-}
+  declare const query: ${typeVariableName};
+  export default query;
     `;
 }
