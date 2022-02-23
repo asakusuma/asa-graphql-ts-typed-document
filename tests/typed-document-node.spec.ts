@@ -64,6 +64,49 @@ describe('TypedDocumentNode', () => {
     expect(findAncestor(node, (n) => ts.SyntaxKind[n.kind] === 'ObjectLiteralExpression')).toBeFalsy();
   });
 
+  it('Should work with fragments', async () => {
+    const schema = buildSchema(/* GraphQL */ `
+      schema {
+        query: Query
+      }
+
+      type Query {
+        jobs: [Job!]!
+      }
+
+      type Job {
+        id: ID!
+        recruiterName: String!
+        title: String!
+      }
+    `);
+
+    const ast = parse(/* GraphQL */ `
+      fragment JobFragment on Job {
+        recruiterName
+      }
+      query GetJobs {
+        ...JobFragment
+      }
+    `);
+
+    const res = (await plugin(
+      schema,
+      [{ location: '', document: ast }],
+      {},
+      { outputFile: '' }
+    )) as Types.ComplexPluginOutput;
+
+    expect(res.content).toContain('export type GetJobsDocument');
+
+    const node = ts.createSourceFile(
+      'plugin-output.ts',
+      res.content,
+      ts.ScriptTarget.Latest
+    );
+    expect(findAncestor(node, (n) => ts.SyntaxKind[n.kind] === 'ObjectLiteralExpression')).toBeFalsy();
+  });
+
   it('Should also produce exported query', async () => {
     const schema = buildSchema(/* GraphQL */ `
       schema {
@@ -103,7 +146,6 @@ describe('TypedDocumentNode', () => {
     );
     expect(findAncestor(node, (n) => ts.SyntaxKind[n.kind] === 'ObjectLiteralExpression')).toBeFalsy();
     const children = node.getChildAt(0).getChildren();
-    console.log(res.content);
     expect(children.length).toBe(3);
     expect(ts.SyntaxKind[children[0].kind]).toBe('TypeAliasDeclaration');
     const typeDec = children[0] as ts.TypeAliasDeclaration;
