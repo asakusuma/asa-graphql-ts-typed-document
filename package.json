@@ -1,6 +1,6 @@
 {
   "name": "asa-graphql-ts-typed-document",
-  "version": "0.0.9",
+  "version": "0.0.10",
   "description": "POC graphql-code-generator plugin for typed documents. Forked from https://github.com/dotansimha/graphql-code-generator",
   "repository": {
     "type": "git",
