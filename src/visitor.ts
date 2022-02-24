@@ -7,7 +7,7 @@ import {
   DocumentMode,
   RawClientSideBasePluginConfig,
 } from '@graphql-codegen/visitor-plugin-common';
-import { DefinitionNode, GraphQLSchema, OperationDefinitionNode } from 'graphql';
+import { DefinitionNode, FragmentDefinitionNode, GraphQLSchema, OperationDefinitionNode } from 'graphql';
 
 interface TypeScriptDocumentNodesVisitorPluginConfig extends RawClientSideBasePluginConfig {
   addTypenameToSelectionSets?: boolean;
@@ -57,6 +57,10 @@ export class TypeScriptDocumentNodesVisitor extends ClientSideBaseVisitor<
 
   private getOperationLocation(node: OperationDefinitionNode): string | undefined {
     return this.docSourceMap.get(node);
+  }
+
+  protected _generateFragment(fragmentDocument: FragmentDefinitionNode) {
+    return `export const ${fragmentDocument.name.value}: ${this.getFragmentName(fragmentDocument)};`;
   }
 
   public OperationDefinition(node: OperationDefinitionNode): string {

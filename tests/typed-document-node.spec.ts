@@ -98,6 +98,7 @@ describe('TypedDocumentNode', () => {
     )) as Types.ComplexPluginOutput;
 
     expect(res.content).toContain('export type GetJobsDocument');
+    expect(res.content).toContain('export const JobFragment');
 
     const node = ts.createSourceFile(
       'plugin-output.ts',
