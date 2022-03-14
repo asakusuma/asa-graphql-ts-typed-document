@@ -9,8 +9,8 @@ import {
 } from '@graphql-codegen/visitor-plugin-common';
 import { DefinitionNode, FragmentDefinitionNode, GraphQLSchema, OperationDefinitionNode } from 'graphql';
 
-interface TypeScriptDocumentNodesVisitorPluginConfig extends RawClientSideBasePluginConfig {
-  addTypenameToSelectionSets?: boolean;
+export interface TypeScriptDocumentNodesVisitorPluginConfig extends RawClientSideBasePluginConfig {
+  documentTypeImportDirective?: string;
 }
 
 // This probably gonna be a perf bottleneck. Probably need to somehow ensure source file location is available
@@ -45,7 +45,7 @@ export class TypeScriptDocumentNodesVisitor extends ClientSideBaseVisitor<
       fragments,
       {
         documentMode: DocumentMode.documentNodeImportFragments,
-        documentNodeImport: '@graphql-typed-document-node/core#TypedDocumentNode',
+        documentNodeImport: config.documentTypeImportDirective || '@graphql-typed-document-node/core#TypedDocumentNode',
         ...config,
       },
       {},
@@ -96,9 +96,9 @@ interface QueryTypes {
 
 function getDocumentType(operationResultType: string, operationVariablesTypes?: string) {
   if (operationVariablesTypes) {
-      return `DocumentNode<${operationResultType}, ${operationVariablesTypes}>`;
+      return `DocumentNodez<${operationResultType}, ${operationVariablesTypes}>`;
   }
-  return `DocumentNode<${operationResultType}>`;
+  return `DocumentNodez<${operationResultType}>`;
 }
 
 function generateModuleDeclaration(typeVariableName: string, localTypeNames?: QueryTypes) {

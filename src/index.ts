@@ -3,15 +3,14 @@ import { concatAST, GraphQLSchema, Kind, FragmentDefinitionNode } from 'graphql'
 import { extname } from 'path';
 import {
   LoadedFragment,
-  RawClientSideBasePluginConfig,
   DocumentMode
 } from '@graphql-codegen/visitor-plugin-common';
-import { TypeScriptDocumentNodesVisitor } from './visitor';
+import { TypeScriptDocumentNodesVisitor, TypeScriptDocumentNodesVisitorPluginConfig } from './visitor';
 
-export const plugin: PluginFunction<RawClientSideBasePluginConfig> = (
+export const plugin: PluginFunction<TypeScriptDocumentNodesVisitorPluginConfig> = (
   schema: GraphQLSchema,
   rawDocuments: Types.DocumentFile[],
-  config: RawClientSideBasePluginConfig
+  config: TypeScriptDocumentNodesVisitorPluginConfig
 ) => {
   // const documents = config.flattenGeneratedTypes ? optimizeOperations(schema, rawDocuments) : rawDocuments;
   const documents = rawDocuments;
@@ -38,7 +37,7 @@ export const plugin: PluginFunction<RawClientSideBasePluginConfig> = (
   };
 };
 
-export const validate: PluginValidateFn<RawClientSideBasePluginConfig> = async (
+export const validate: PluginValidateFn<TypeScriptDocumentNodesVisitorPluginConfig> = async (
   schema: GraphQLSchema,
   documents: Types.DocumentFile[],
   config,

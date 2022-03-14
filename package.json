@@ -8,9 +8,10 @@
   },
   "license": "MIT",
   "scripts": {
+    "build": "tsc",
     "lint": "eslint **/*.ts",
     "test": "jest --no-watchman --config ./jest.config.js",
-    "prepack": "tsc",
+    "prepack": "yarn build",
     "test:debug": "node --inspect-brk node_modules/.bin/jest --runInBand --no-watchman --config ./jest.config.js"
   },
   "peerDependencies": {

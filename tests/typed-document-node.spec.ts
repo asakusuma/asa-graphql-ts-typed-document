@@ -64,6 +64,42 @@ describe('TypedDocumentNode', () => {
     expect(findAncestor(node, (n) => ts.SyntaxKind[n.kind] === 'ObjectLiteralExpression')).toBeFalsy();
   });
 
+  it('Should handle custom query type', async () => {
+    const schema = buildSchema(/* GraphQL */ `
+      schema {
+        query: Query
+      }
+
+      type Query {
+        jobs: [Job!]!
+      }
+
+      type Job {
+        id: ID!
+        recruiterName: String!
+        title: String!
+      }
+    `);
+
+    const ast = parse(/* GraphQL */ `
+      query GetJobs {
+        jobs {
+          recruiterName
+        }
+      }
+    `);
+
+    const res = (await plugin(
+      schema,
+      [{ location: '', document: ast }],
+      { documentTypeImportDirective: 'my-custom-type-module#CustomDocumentNamedImport' },
+      { outputFile: '' }
+    )) as Types.ComplexPluginOutput;
+
+    expect(res.prepend.length).toEqual(1);
+    expect(res.prepend[0]).toEqual("import { CustomDocumentNamedImport as DocumentNode } from 'my-custom-type-module';");
+  });
+
   it('Should work with fragments', async () => {
     const schema = buildSchema(/* GraphQL */ `
       schema {
