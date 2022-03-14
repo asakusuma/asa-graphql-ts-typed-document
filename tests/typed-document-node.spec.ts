@@ -152,5 +152,6 @@ describe('TypedDocumentNode', () => {
     const typeDec = children[0] as ts.TypeAliasDeclaration;
     expect(typeDec.name.escapedText).toEqual('GetJobsDocument');
     expect(ts.SyntaxKind[children[2].kind]).toBe('ExportAssignment');
+    // TODO content assertions
   });
 });
