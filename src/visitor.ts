@@ -96,9 +96,9 @@ interface QueryTypes {
 
 function getDocumentType(operationResultType: string, operationVariablesTypes?: string) {
   if (operationVariablesTypes) {
-      return `DocumentNodez<${operationResultType}, ${operationVariablesTypes}>`;
+      return `DocumentNode<${operationResultType}, ${operationVariablesTypes}>`;
   }
-  return `DocumentNodez<${operationResultType}>`;
+  return `DocumentNode<${operationResultType}>`;
 }
 
 function generateModuleDeclaration(typeVariableName: string, localTypeNames?: QueryTypes) {
