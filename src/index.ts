@@ -1,11 +1,38 @@
 import { Types, PluginValidateFn, PluginFunction, oldVisit } from '@graphql-codegen/plugin-helpers';
-import { concatAST, GraphQLSchema, Kind, FragmentDefinitionNode } from 'graphql';
+import { concatAST, GraphQLSchema, Kind, FragmentDefinitionNode, DocumentNode, visit } from 'graphql';
 import { extname } from 'path';
 import {
   LoadedFragment,
   DocumentMode
 } from '@graphql-codegen/visitor-plugin-common';
 import { TypeScriptDocumentNodesVisitor, TypeScriptDocumentNodesVisitorPluginConfig } from './visitor';
+
+function getUsedFragments(node: DocumentNode): string[] {
+  const imports: string[] = [];
+  visit(node, {
+    leave: {
+      FragmentSpread(node) {
+        imports.push(node.name.value);
+      }
+    }
+  });
+  return imports;
+}
+
+function generateFragmentImports(node: DocumentNode, fragmentImportsSourceMap: Record<string, string> = {}): string[] {
+  return getUsedFragments(node)
+    .filter((fragmentName) => {
+      // TODO: instead of assuming all fragments needed exist in the map,
+      // look through all fragment definitions in the given document and throw 
+      // if there's a used fragment thats not either locally defined or supplied
+      // in the fragmentImportsSourceMap
+      return !!fragmentImportsSourceMap[fragmentName];
+    })
+    .map((fragmentName) => {
+      // TODO merge imports from same source path into one statement
+      return `import { ${fragmentName} } from '${fragmentImportsSourceMap[fragmentName]}';`
+    });
+}
 
 export const plugin: PluginFunction<TypeScriptDocumentNodesVisitorPluginConfig> = (
   schema: GraphQLSchema,
@@ -32,7 +59,7 @@ export const plugin: PluginFunction<TypeScriptDocumentNodesVisitorPluginConfig> 
   const visitorResult = oldVisit(allAst, { leave: visitor });
 
   return {
-    prepend: allAst.definitions.length === 0 ? [] : visitor.getImports(),
+    prepend: allAst.definitions.length === 0 ? [] : visitor.getImports().concat(generateFragmentImports(allAst, config.fragmentImportsSourceMap)),
     content: [visitor.fragments, ...visitorResult.definitions.filter(t => typeof t === 'string')].join('\n'),
   };
 };

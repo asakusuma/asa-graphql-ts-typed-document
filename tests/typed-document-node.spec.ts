@@ -16,7 +16,6 @@ function findAncestor(node: ts.Node, visitor: (n: ts.Node) => boolean) {
   return found;
 }
 
-
 describe('TypedDocumentNode', () => {
   it('Should not output imports when there are no operations at all', async () => {
     const result = (await plugin(null as any, [], {})) as Types.ComplexPluginOutput;
@@ -133,6 +132,9 @@ describe('TypedDocumentNode', () => {
       { outputFile: '' }
     )) as Types.ComplexPluginOutput;
 
+    // Should not attempt to import inline fragment
+    expect(!!res.prepend.find((s) => s.includes('JobFragment'))).toBe(false);
+
     expect(res.content).toContain('export type GetJobsDocument');
     expect(res.content).toContain('export const JobFragment');
 
@@ -142,6 +144,44 @@ describe('TypedDocumentNode', () => {
       ts.ScriptTarget.Latest
     );
     expect(findAncestor(node, (n) => ts.SyntaxKind[n.kind] === 'ObjectLiteralExpression')).toBeFalsy();
+  });
+
+  it('Should work with fragment imports via fragmentImportsSourceMap', async () => {
+    const schema = buildSchema(/* GraphQL */ `
+      schema {
+        query: Query
+      }
+
+      type Query {
+        jobs: [Job!]!
+      }
+
+      type Job {
+        id: ID!
+        recruiterName: String!
+        title: String!
+      }
+    `);
+
+    const ast = parse(/* GraphQL */ `
+      #import "./_fragment.graphql"
+      query GetJobs {
+        ...JobFragment
+      }
+    `);
+
+    const res = (await plugin(
+      schema,
+      [ { location: '', document: ast }],
+      {
+        fragmentImportsSourceMap: {
+          JobFragment: './_fragment.graphql'
+        }
+      },
+      { outputFile: '' }
+    )) as Types.ComplexPluginOutput;
+
+    expect(res.prepend).toContain(`import { JobFragment } from './_fragment.graphql';`);
   });
 
   it('Should also produce exported query', async () => {

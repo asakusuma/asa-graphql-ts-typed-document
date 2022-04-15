@@ -11,6 +11,7 @@ import { DefinitionNode, FragmentDefinitionNode, GraphQLSchema, OperationDefinit
 
 export interface TypeScriptDocumentNodesVisitorPluginConfig extends RawClientSideBasePluginConfig {
   documentTypeImportDirective?: string;
+  fragmentImportsSourceMap?: Record<string, string>;
 }
 
 // This probably gonna be a perf bottleneck. Probably need to somehow ensure source file location is available
