@@ -19,8 +19,13 @@ function getUsedFragments(node: DocumentNode): string[] {
   return imports;
 }
 
-function generateFragmentImports(node: DocumentNode, fragmentImportsSourceMap: Record<string, string> = {}): string[] {
-  return getUsedFragments(node)
+interface FileImports {
+  filePath: string;
+  namedImports: string[];
+}
+
+function generateFragmentImports(node: DocumentNode, fragmentNameMapper: (n: string) => string, fragmentImportsSourceMap: Record<string, string> = {}): string[] {
+  const fragmentImportsMap = getUsedFragments(node)
     .filter((fragmentName) => {
       // TODO: instead of assuming all fragments needed exist in the map,
       // look through all fragment definitions in the given document and throw 
@@ -28,9 +33,20 @@ function generateFragmentImports(node: DocumentNode, fragmentImportsSourceMap: R
       // in the fragmentImportsSourceMap
       return !!fragmentImportsSourceMap[fragmentName];
     })
-    .map((fragmentName) => {
-      // TODO merge imports from same source path into one statement
-      return `import { ${fragmentName} } from '${fragmentImportsSourceMap[fragmentName]}';`
+    .reduce((total, fragmentName) => {
+      const filePath = fragmentImportsSourceMap[fragmentName];
+      total[filePath] = total[filePath] || {
+        filePath,
+        namedImports: []
+      };
+      total[filePath].namedImports.push(fragmentName);
+      return total;
+    }, {} as Record<string, FileImports>);
+    
+    return Object.keys(fragmentImportsMap).map((filePath) => {
+      const { namedImports } = fragmentImportsMap[filePath];
+      const mappedNames = namedImports.map(fragmentNameMapper);
+      return `import { ${mappedNames.join(', ')} } from '${filePath}';`
     });
 }
 
@@ -57,9 +73,12 @@ export const plugin: PluginFunction<TypeScriptDocumentNodesVisitorPluginConfig> 
 
   const visitor = new TypeScriptDocumentNodesVisitor(schema, allFragments, config, documents);
   const visitorResult = oldVisit(allAst, { leave: visitor });
+  const nameMapper = (name: string) => {
+    return name + visitor.getFragmentSuffix(name);
+  };
 
   return {
-    prepend: allAst.definitions.length === 0 ? [] : visitor.getImports().concat(generateFragmentImports(allAst, config.fragmentImportsSourceMap)),
+    prepend: allAst.definitions.length === 0 ? [] : visitor.getImports().concat(generateFragmentImports(allAst, nameMapper, config.fragmentImportsSourceMap)),
     content: [visitor.fragments, ...visitorResult.definitions.filter(t => typeof t === 'string')].join('\n'),
   };
 };

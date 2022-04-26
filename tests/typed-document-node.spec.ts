@@ -181,7 +181,47 @@ describe('TypedDocumentNode', () => {
       { outputFile: '' }
     )) as Types.ComplexPluginOutput;
 
-    expect(res.prepend).toContain(`import { JobFragment } from './_fragment.graphql';`);
+    expect(res.prepend).toContain(`import { JobFragmentFragment } from './_fragment.graphql';`);
+  });
+
+  it('Should combine imports from same file into same import statement', async () => {
+    const schema = buildSchema(/* GraphQL */ `
+      schema {
+        query: Query
+      }
+
+      type Query {
+        jobs: [Job!]!
+      }
+
+      type Job {
+        id: ID!
+        recruiterName: String!
+        title: String!
+      }
+    `);
+
+    const ast = parse(/* GraphQL */ `
+      #import "./_fragment.graphql"
+      query GetJobs {
+        ...JobFragment
+        ...OtherJobFragment
+      }
+    `);
+
+    const res = (await plugin(
+      schema,
+      [ { location: '', document: ast }],
+      {
+        fragmentImportsSourceMap: {
+          JobFragment: './_fragment.graphql',
+          OtherJobFragment: './_fragment.graphql'
+        }
+      },
+      { outputFile: '' }
+    )) as Types.ComplexPluginOutput;
+
+    expect(res.prepend).toContain(`import { JobFragmentFragment, OtherJobFragmentFragment } from './_fragment.graphql';`);
   });
 
   it('Should work with nested fragment imports via fragmentImportsSourceMap', async () => {
@@ -220,7 +260,7 @@ describe('TypedDocumentNode', () => {
       { outputFile: '' }
     )) as Types.ComplexPluginOutput;
 
-    expect(res.prepend).toContain(`import { JobFragment } from './_anther_fragment.graphql';`);
+    expect(res.prepend).toContain(`import { JobFragmentFragment } from './_anther_fragment.graphql';`);
   });
 
   it('Should also produce exported query', async () => {

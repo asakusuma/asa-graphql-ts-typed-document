@@ -14,7 +14,7 @@ export interface TypeScriptDocumentNodesVisitorPluginConfig extends RawClientSid
   fragmentImportsSourceMap?: Record<string, string>;
 }
 
-// This probably gonna be a perf bottleneck. Probably need to somehow ensure source file location is available
+// TODO This probably gonna be a perf bottleneck. Probably need to somehow ensure source file location is available
 // natively in the visitor for the OperationDefinition method
 function generateOperationToSourceMap(documents: Types.DocumentFile[]): Map<DefinitionNode, string> {
   const map = new Map<DefinitionNode, string>();
