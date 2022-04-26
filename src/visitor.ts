@@ -30,6 +30,10 @@ function generateOperationToSourceMap(documents: Types.DocumentFile[]): Map<Defi
   return map;
 }
 
+function isFragmentDefinition(doc: DefinitionNode): doc is FragmentDefinitionNode {
+  return doc.kind === 'FragmentDefinition';
+}
+
 export class TypeScriptDocumentNodesVisitor extends ClientSideBaseVisitor<
   TypeScriptDocumentNodesVisitorPluginConfig,
   ClientSideBasePluginConfig
@@ -54,6 +58,15 @@ export class TypeScriptDocumentNodesVisitor extends ClientSideBaseVisitor<
     );
 
     this.docSourceMap = generateOperationToSourceMap(documents);
+  }
+
+  // Only return locally defined fragments. Ignore imported fragments.
+  _extractFragments(document: FragmentDefinitionNode | OperationDefinitionNode, withNested?: boolean) {
+    const fragments = super._extractFragments(document, withNested);
+    const localFragments = this._documents.map((r) => {
+      return r.document.definitions.filter(isFragmentDefinition).map(({ name }) => name.value );
+    }).flat();
+    return fragments.filter((fragmentName) => localFragments.includes(fragmentName));
   }
 
   private getOperationLocation(node: OperationDefinitionNode): string | undefined {
