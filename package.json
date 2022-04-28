@@ -1,6 +1,6 @@
 {
   "name": "asa-graphql-ts-typed-document",
-  "version": "0.0.15",
+  "version": "0.0.16",
   "description": "POC graphql-code-generator plugin for typed documents. Forked from https://github.com/dotansimha/graphql-code-generator",
   "repository": {
     "type": "git",
@@ -22,7 +22,6 @@
     "@graphql-codegen/visitor-plugin-common": "^2.6.0",
     "auto-bind": "~4.0.0",
     "change-case-all": "^1.0.14",
-    "graphql": "^14.7.0",
     "tslib": "~2.3.0"
   },
   "main": "dist/src/index.js",
@@ -56,6 +55,7 @@
     "@babel/preset-env": "^7.16.11",
     "@babel/preset-typescript": "^7.16.7",
     "@types/jest": "^27.4.0",
+    "graphql": "^14.7.0",
     "babel-jest": "^27.4.6",
     "jest": "^27.4.7",
     "ts-jest": "^27.1.3",
