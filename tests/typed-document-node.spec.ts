@@ -184,6 +184,47 @@ describe('TypedDocumentNode', () => {
     expect(res.prepend).toContain(`import { JobFragmentFragment } from './_fragment.graphql';`);
   });
 
+  it('Should not duplicate imports for the same fragment used twice from fragmentImportsSourceMap', async () => {
+    const schema = buildSchema(/* GraphQL */ `
+      schema {
+        query: Query
+      }
+
+      type Query {
+        jobs: [Job!]!
+      }
+
+      type Job {
+        id: ID!
+        recruiterName: String!
+        title: String!
+      }
+    `);
+
+    const ast = parse(/* GraphQL */ `
+      #import "./_fragment.graphql"
+      query GetJobs {
+        ...JobFragment
+        child {
+          ...JobFragment
+        }
+      }
+    `);
+
+    const res = (await plugin(
+      schema,
+      [ { location: '', document: ast }],
+      {
+        fragmentImportsSourceMap: {
+          JobFragment: './_fragment.graphql'
+        }
+      },
+      { outputFile: '' }
+    )) as Types.ComplexPluginOutput;
+
+    expect(res.prepend).toContain(`import { JobFragmentFragment } from './_fragment.graphql';`);
+  });
+
   it('Should combine imports from same file into same import statement', async () => {
     const schema = buildSchema(/* GraphQL */ `
       schema {

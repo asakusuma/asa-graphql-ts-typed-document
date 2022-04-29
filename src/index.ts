@@ -39,15 +39,17 @@ function generateFragmentImports(node: DocumentNode, fragmentNameMapper: (n: str
         filePath,
         namedImports: []
       };
-      total[filePath].namedImports.push(fragmentName);
+      if (!total[filePath].namedImports.includes(fragmentName)) {
+        total[filePath].namedImports.push(fragmentName);
+      }
       return total;
     }, {} as Record<string, FileImports>);
     
-    return Object.keys(fragmentImportsMap).map((filePath) => {
-      const { namedImports } = fragmentImportsMap[filePath];
-      const mappedNames = namedImports.map(fragmentNameMapper);
-      return `import { ${mappedNames.join(', ')} } from '${filePath}';`
-    });
+  return Object.keys(fragmentImportsMap).map((filePath) => {
+    const { namedImports } = fragmentImportsMap[filePath];
+    const mappedNames = namedImports.map(fragmentNameMapper);
+    return `import { ${mappedNames.join(', ')} } from '${filePath}';`
+  });
 }
 
 export const plugin: PluginFunction<TypeScriptDocumentNodesVisitorPluginConfig> = (
